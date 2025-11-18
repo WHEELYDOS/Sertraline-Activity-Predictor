@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sertraline Activity Predictor</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 30px;
+            color: #1f2933;
+        }
+
+        h1, h2, h3 {
+            font-weight: 600;
+        }
+
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: #ffffff;
+            border: 1px solid #d3d7db;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+            color: #4b5563;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bfc4c9;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            background: #1f4ed8;
+            color: #ffffff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status.info {
+            background: #e0e7ff;
+            color: #1e3a8a;
+            border: 1px solid #c7d2fe;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.95rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="panel">
+            <h1>Sertraline Activity Predictor</h1>
+            <p class="muted">Enter a SMILES string and choose a model to see the raw prediction and supporting molecular features.</p>
+
+            <label for="smiles">SMILES String</label>
+            <input type="text" id="smiles" placeholder="CC(=O)OC1=CC=CC=C1C(=O)O">
+
+            <label for="model">Model</label>
+            <select id="model">
+                {% for name in model_names %}
+                    <option value="{{ name }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+
+            <button id="predict-btn">Run Prediction</button>
+
+            <div id="loading" class="status info">Running prediction...</div>
+            <div id="error" class="status error"></div>
+        </section>
+
+        <section class="panel" id="results" style="display: none;">
+            <h2>Prediction</h2>
+            <p class="muted" id="model-used"></p>
+            <p><strong>Raw prediction:</strong> <span id="prediction-value">-</span></p>
+            <p><strong>Confidence:</strong> <span id="confidence-value">-</span></p>
+
+            <div class="grid">
+                <div>
+                    <h3>Probabilities</h3>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>Inactive (class 0)</th>
+                                <td id="prob-class-0">-</td>
+                            </tr>
+                            <tr>
+                                <th>Active (class 1)</th>
+                                <td id="prob-class-1">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Features</h3>
+                    <table id="features-table">
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const predictBtn = document.getElementById('predict-btn');
+        const loadingBox = document.getElementById('loading');
+        const errorBox = document.getElementById('error');
+        const resultsSection = document.getElementById('results');
+
+        predictBtn.addEventListener('click', async () => {
+            const smiles = document.getElementById('smiles').value.trim();
+            const modelName = document.getElementById('model').value;
+
+            resultsSection.style.display = 'none';
+            errorBox.style.display = 'none';
+
+            if (!smiles) {
+                showError('Please provide a SMILES string.');
+                return;
+            }
+
+            loadingBox.style.display = 'block';
+            predictBtn.disabled = true;
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ smiles, model_name: modelName })
+                });
+
+                const data = await response.json();
+                loadingBox.style.display = 'none';
+                predictBtn.disabled = false;
+
+                if (!response.ok) {
+                    showError(data.error || 'Prediction failed.');
+                    return;
+                }
+
+                displayResults(data);
+            } catch (err) {
+                loadingBox.style.display = 'none';
+                predictBtn.disabled = false;
+                showError(err.message);
+            }
+        });
+
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.style.display = 'block';
+        }
+
+        function displayResults(data) {
+            document.getElementById('model-used').textContent = `Model: ${data.model_name}`;
+            document.getElementById('prediction-value').textContent = data.prediction;
+            document.getElementById('confidence-value').textContent = (data.confidence * 100).toFixed(2) + '%';
+            document.getElementById('prob-class-0').textContent = (data.probabilities.class_0 * 100).toFixed(2) + '%';
+            document.getElementById('prob-class-1').textContent = (data.probabilities.class_1 * 100).toFixed(2) + '%';
+
+            const tableBody = document.querySelector('#features-table tbody');
+            tableBody.innerHTML = '';
+            Object.entries(data.features).forEach(([label, value]) => {
+                const row = document.createElement('tr');
+                const keyCell = document.createElement('th');
+                keyCell.textContent = formatLabel(label);
+                const valueCell = document.createElement('td');
+                valueCell.textContent = value;
+                row.appendChild(keyCell);
+                row.appendChild(valueCell);
+                tableBody.appendChild(row);
+            });
+
+            resultsSection.style.display = 'block';
+        }
+
+        function formatLabel(label) {
+            return label
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, char => char.toUpperCase());
+        }
+    </script>
+</body>
+</html>
