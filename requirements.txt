@@ -7,3 +7,5 @@ seaborn
 flask
 uvicorn
 asgiref
+statsmodels
+notebook
