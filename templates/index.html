@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sertraline Activity Predictor</title>
 
@@ -18,18 +18,6 @@
         margin: 0 auto;
     }
 
-    h1 {
-        font-size: 1.6rem;
-        margin-bottom: 4px;
-        font-weight: 700;
-    }
-
-    h2 {
-        margin-bottom: 12px;
-        font-size: 1.2rem;
-        color: #374151;
-    }
-
     .panel {
         background: white;
         padding: 22px;
@@ -38,9 +26,11 @@
         margin-bottom: 22px;
     }
 
+    h1 { font-size: 1.6rem; margin-bottom: 4px; font-weight: bold; }
+    h2 { margin-bottom: 12px; font-size: 1.2rem; }
+
     label {
         font-weight: bold;
-        font-size: 0.95rem;
         display: block;
         margin-top: 14px;
         margin-bottom: 6px;
@@ -63,8 +53,8 @@
         border: none;
         border-radius: 6px;
         font-size: 1rem;
-        cursor: pointer;
         font-weight: bold;
+        cursor: pointer;
     }
 
     button:disabled {
@@ -75,47 +65,54 @@
     .status {
         margin-top: 16px;
         padding: 12px;
-        display: none;
         border-radius: 6px;
+        display: none;
     }
 
     .info { background: #e0e7ff; border: 1px solid #c7d2fe; }
     .error { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 12px;
-    }
-    th, td {
-        padding: 10px 8px;
-        border-bottom: 1px solid #e5e7eb;
-        text-align: left;
-    }
-    th {
-        background: #f3f4f6;
-        width: 50%;
-    }
-
-    /* Simple progress bar */
+    /* Progress bars */
     .progress-container {
         background: #e5e7eb;
         height: 20px;
         border-radius: 10px;
         overflow: hidden;
         margin-top: 6px;
+        margin-bottom: 14px;
     }
 
     .progress-fill {
         height: 100%;
         width: 0%;
         transition: width 0.5s ease;
-        border-radius: 10px;
     }
 
     .bar-green { background: #16a34a; }
     .bar-red   { background: #dc2626; }
     .bar-blue  { background: #2563eb; }
+
+    .prob-label {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+    }
+
+    th, td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+
+    th {
+        background: #f3f4f6;
+        width: 50%;
+    }
 
     .muted { color: #6b7280; font-size: 0.9rem; }
 </style>
@@ -123,9 +120,11 @@
 
 <body>
 <main>
+
+    <!-- INPUT PANEL -->
     <section class="panel">
         <h1>Sertraline Activity Predictor</h1>
-        <p class="muted">Enter a SMILES string to predict activity and view molecular descriptors.</p>
+        <p class="muted">Enter a SMILES string and choose a model.</p>
 
         <label>SMILES</label>
         <input id="smiles" type="text" placeholder="CC(=O)OC1=CC=CC=C1C(=O)O">
@@ -143,30 +142,54 @@
         <div id="error" class="status error"></div>
     </section>
 
+    <!-- RESULTS PANEL -->
     <section class="panel" id="results" style="display:none;">
         <h2>Prediction Output</h2>
         <p class="muted" id="model-used"></p>
 
-        <!-- Activity Bar -->
-        <h3>Activity</h3>
+        <!-- Final Result -->
+        <h3>Result</h3>
+        <p style="font-size: 1.4rem; font-weight: bold;" id="prediction-text">-</p>
+
+        <!-- ACTIVITY BAR -->
+        <div class="prob-label">
+            Activity Probability: <span id="activity-percent">-</span>
+        </div>
         <div class="progress-container">
             <div id="activity-bar" class="progress-fill"></div>
         </div>
-        <p><strong>Predicted Activity:</strong> <span id="prediction-value">-</span></p>
 
-        <!-- Confidence Bar -->
-        <h3>Confidence</h3>
+        <!-- CONFIDENCE BAR -->
+        <div class="prob-label">
+            Confidence: <span id="confidence-percent">-</span>
+        </div>
         <div class="progress-container">
             <div id="confidence-bar" class="progress-fill bar-blue"></div>
         </div>
-        <p><strong>Confidence:</strong> <span id="confidence-value">-</span></p>
 
-        <!-- Molecular Features Table -->
+        <h3>Probabilities</h3>
+
+        <div class="prob-label">
+            Inactive: <span id="prob-inactive-text">-</span>
+        </div>
+        <div class="progress-container">
+            <div id="prob-inactive-bar" class="progress-fill bar-blue"></div>
+        </div>
+
+        <div class="prob-label">
+            Active: <span id="prob-active-text">-</span>
+        </div>
+        <div class="progress-container">
+            <div id="prob-active-bar" class="progress-fill bar-blue"></div>
+        </div>
+
+        <!-- FEATURES TABLE -->
         <h3>Molecular Features</h3>
         <table id="features-table">
             <tbody></tbody>
         </table>
     </section>
+
 </main>
 
 <script>
@@ -222,21 +245,30 @@ function showResults(data){
     document.getElementById("model-used").textContent = "Model: " + data.model_name;
 
     const pred = data.prediction;
-    const activityProb = data.probabilities.class_1 * 100;
+    const p0 = data.probabilities.class_0 * 100;
+    const p1 = data.probabilities.class_1 * 100;
     const confidence = data.confidence * 100;
 
-    // Set prediction text
-    document.getElementById("prediction-value").textContent = pred;
-    document.getElementById("confidence-value").textContent = confidence.toFixed(2) + "%";
+    // Show result text
+    document.getElementById("prediction-text").textContent = pred === 1 ? "Active" : "Inactive";
 
-    // Activity bar logic
+    // Activity percent (class_1)
+    document.getElementById("activity-percent").textContent = p1.toFixed(2) + "%";
+
     const activityBar = document.getElementById("activity-bar");
-    activityBar.style.width = activityProb + "%";
-    activityBar.className = "progress-fill " + (activityProb >= 50 ? "bar-green" : "bar-red");
+    activityBar.style.width = p1 + "%";
+    activityBar.className = "progress-fill " + (p1 >= 50 ? "bar-green" : "bar-red");
 
     // Confidence bar
-    const confBar = document.getElementById("confidence-bar");
-    confBar.style.width = confidence + "%";
+    document.getElementById("confidence-percent").textContent = confidence.toFixed(2) + "%";
+    document.getElementById("confidence-bar").style.width = confidence + "%";
+
+    // Probabilities text + bars
+    document.getElementById("prob-inactive-text").textContent = p0.toFixed(2) + "%";
+    document.getElementById("prob-active-text").textContent = p1.toFixed(2) + "%";
+
+    document.getElementById("prob-inactive-bar").style.width = p0 + "%";
+    document.getElementById("prob-active-bar").style.width = p1 + "%";
 
     // Features table
     const tbody = document.querySelector("#features-table tbody");
