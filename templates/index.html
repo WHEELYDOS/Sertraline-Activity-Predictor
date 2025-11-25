@@ -1,306 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sertraline Activity Predictor</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sertraline Activity Predictor — Enhanced</title>
 
-    <style>
-        /* Global reset */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: "Inter", Arial, sans-serif;
-        }
+<style>
+    /* ========== THEME VARIABLES ========== */
+    :root{
+        --bg: #f4f6fb;
+        --surface: rgba(255,255,255,0.7);
+        --muted: #6b7280;
+        --text: #0f1724;
+        --primary-start: #4f46e5;
+        --primary-end: #6366f1;
+        --accent: #06b6d4;
+        --glass-border: rgba(255,255,255,0.6);
+        --card-shadow: 0 8px 30px rgba(15,23,36,0.06);
+        --success: #10b981;
+        --danger: #ef4444;
+        --bar-bg: #e6eefc;
+        --bar-track: rgba(15,23,36,0.06);
+        --glass-blur: 14px;
+        --radius: 12px;
+        --transition: 320ms cubic-bezier(.2,.9,.3,1);
+        --max-feature-value: 1000; /* used as fallback scale */
+    }
 
-        body {
-            background: linear-gradient(135deg, #dbeafe, #f3e8ff, #ffe4e6);
-            min-height: 100vh;
-            padding: 40px 20px;
-            color: #1e293b;
-            backdrop-filter: blur(12px);
-        }
+    /* Dim dark mode variables */
+    :root[data-theme="dark"]{
+        --bg: #0b1220;
+        --surface: rgba(16,24,32,0.55);
+        --muted: #94a3b8;
+        --text: #e6eef8;
+        --primary-start: #4f46e5;
+        --primary-end: #7c3aed;
+        --accent: #06b6d4;
+        --glass-border: rgba(255,255,255,0.06);
+        --card-shadow: 0 10px 40px rgba(2,6,23,0.7);
+        --success: #16a34a;
+        --danger: #f87171;
+        --bar-bg: rgba(255,255,255,0.04);
+        --bar-track: rgba(255,255,255,0.06);
+        --glass-blur: 6px;
+    }
 
-        main {
-            max-width: 900px;
-            margin: 0 auto;
-        }
+    /* ========== RESET & LAYOUT ========== */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        background: linear-gradient(180deg,var(--bg), #fefefe 120%);
+        color:var(--text);
+        padding:28px;
+        -webkit-font-smoothing:antialiased;
+        -moz-osx-font-smoothing:grayscale;
+        transition: background var(--transition), color var(--transition);
+    }
 
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 12px;
-        }
+    main{max-width:980px;margin:0 auto}
 
-        h2 {
-            font-size: 1.5rem;
-            margin-bottom: 12px;
-        }
+    h1{font-size:1.6rem;margin-bottom:6px}
+    h2{font-size:1.1rem;margin-bottom:10px;color:var(--muted)}
 
-        /* Glassmorphic Panel */
-        .panel {
-            background: rgba(255, 255, 255, 0.55);
-            border-radius: 16px;
-            padding: 32px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(18px);
-            box-shadow: 
-                0 4px 20px rgba(0, 0, 0, 0.08),
-                0 8px 32px rgba(0, 0, 0, 0.06);
-            animation: fadeIn 0.6s ease-out;
-        }
+    .top-row{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .title-block{display:flex;flex-direction:column}
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+    /* ========== PANEL (glass) ========== */
+    .panel{
+        background:var(--surface);
+        border-radius:var(--radius);
+        padding:20px;
+        border:1px solid var(--glass-border);
+        backdrop-filter: blur(var(--glass-blur));
+        box-shadow:var(--card-shadow);
+        margin-bottom:18px;
+        transition: box-shadow var(--transition), transform var(--transition);
+    }
 
-        /* Labels */
-        label {
-            display: block;
-            margin: 18px 0 6px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #475569;
-        }
+    /* ========== INPUTS ========== */
+    label{display:block;font-weight:600;color:var(--muted);font-size:0.9rem;margin-top:12px;margin-bottom:8px}
+    input[type="text"], select{
+        width:100%;
+        padding:12px 14px;
+        border-radius:10px;
+        border:1px solid var(--bar-track);
+        background:transparent;
+        color:var(--text);
+        font-size:1rem;
+        outline:none;
+        transition:box-shadow var(--transition), border-color var(--transition);
+    }
+    input[type="text"]:focus, select:focus{box-shadow:0 6px 18px rgba(99,102,241,0.12);border-color:var(--primary-end)}
 
-        /* Inputs */
-        input[type="text"], select {
-            width: 100%;
-            padding: 14px 16px;
-            font-size: 1rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.85);
-            outline: none;
-            transition: 0.25s ease;
-        }
+    .controls{display:flex;gap:12px;margin-top:16px;align-items:center}
+    .btn{
+        padding:12px 16px;border-radius:10px;border:none;font-weight:700;cursor:pointer;
+        background:linear-gradient(90deg,var(--primary-start),var(--primary-end));
+        color:white;transition:transform .18s,var(--transition);
+    }
+    .btn[disabled]{opacity:.6;cursor:not-allowed;transform:none}
+    .btn:hover:not([disabled]){transform:translateY(-3px)}
 
-        input[type="text"]:focus, select:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
-        }
+    .toggle{
+        display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--glass-border);
+        background:transparent;color:var(--muted);cursor:pointer;
+    }
 
-        /* Button */
-        button {
-            margin-top: 24px;
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #4f46e5, #6366f1);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.25s ease;
-        }
+    /* ========== STATUS ========== */
+    .status{margin-top:12px;padding:10px 12px;border-radius:10px;display:none}
+    .status.info{background:linear-gradient(90deg, rgba(99,102,241,0.08), rgba(6,182,212,0.06));color:var(--primary-end);border:1px solid rgba(99,102,241,0.08)}
+    .status.error{background:rgba(239,68,68,0.06);color:var(--danger);border:1px solid rgba(239,68,68,0.06)}
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
-        }
+    /* ========== GRID ========== */
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media (max-width:880px){.grid{grid-template-columns:1fr}}
 
-        button:disabled {
-            background: #94a3b8;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
+    /* ========== PREDICTION CARD ========== */
+    .card-small{padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border:1px solid var(--glass-border)}
+    .stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .stat-label{color:var(--muted);font-weight:600}
+    .stat-value{font-weight:800;font-size:1.05rem}
 
-        /* Status messages */
-        .status {
-            margin-top: 18px;
-            padding: 14px;
-            border-radius: 10px;
-            display: none;
-            font-size: 0.95rem;
-            animation: fadeIn 0.4s ease-out;
-        }
+    /* ========== PROGRESS BARS (animated) ========== */
+    .progress{
+        height:18px;border-radius:999px;background:var(--bar-bg);position:relative;overflow:hidden;border:1px solid var(--bar-track)
+    }
+    .progress .fill{
+        height:100%;width:0;display:block;border-radius:999px;transform-origin:left center;
+        transition: width 900ms cubic-bezier(.2,.9,.3,1), box-shadow 360ms;
+    }
+    .progress .label{
+        position:absolute;right:10px;top:0;bottom:0;display:flex;align-items:center;font-weight:700;font-size:0.85rem;color:rgba(255,255,255,0.95);
+        text-shadow:0 2px 6px rgba(0,0,0,0.35)
+    }
 
-        .status.error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
+    /* colored fills */
+    .fill.primary{background:linear-gradient(90deg,var(--primary-start),var(--primary-end));box-shadow:0 8px 18px rgba(99,102,241,0.18)}
+    .fill.success{background:linear-gradient(90deg,#34d399,#10b981);box-shadow:0 8px 18px rgba(16,185,129,0.12)}
+    .fill.warn{background:linear-gradient(90deg,#f59e0b,#f97316);box-shadow:0 8px 18px rgba(249,115,22,0.12)}
+    .fill.danger{background:linear-gradient(90deg,#fb7185,#ef4444);box-shadow:0 8px 18px rgba(239,68,68,0.12)}
 
-        .status.info {
-            background: #e0e7ff;
-            color: #3730a3;
-            border: 1px solid #c7d2fe;
-        }
+    /* probability rows */
+    .prob-row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    .prob-name{width:110px;font-weight:700;color:var(--muted);font-size:0.95rem}
 
-        /* Tables & layout */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px;
-            border-radius: 10px;
-            overflow: hidden;
-        }
+    /* molecular features list */
+    .features-list{display:flex;flex-direction:column;gap:12px}
+    .feature-item{display:flex;flex-direction:column;gap:6px}
+    .feature-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:0.9rem}
 
-        th, td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 0.95rem;
-        }
+    /* small pill */
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700;background:rgba(0,0,0,0.05);color:var(--muted);font-size:0.85rem}
 
-        th {
-            width: 55%;
-            font-weight: 600;
-            color: #475569;
-        }
+    /* footer small text */
+    .muted{color:var(--muted);font-size:0.92rem}
 
-        .grid {
-            margin-top: 18px;
-            display: grid;
-            gap: 25px;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        }
+    /* subtle entrance for result panel */
+    .enter {animation: enterUp 600ms cubic-bezier(.2,.9,.3,1)}
+    @keyframes enterUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-        .muted {
-            color: #64748b;
-        }
-    </style>
+</style>
 </head>
-
 <body>
-    <main>
-
-        <!-- Input Panel -->
-        <section class="panel">
+<main>
+    <div class="top-row">
+        <div class="title-block">
             <h1>Sertraline Activity Predictor</h1>
-            <p class="muted">Enter a SMILES string and choose a prediction model.</p>
+            <h2>Enter SMILES → pick model → get animated probabilities & features</h2>
+        </div>
 
-            <label for="smiles">SMILES String</label>
-            <input type="text" id="smiles" placeholder="CC(=O)OC1=CC=CC=C1C(=O)O">
+        <div style="display:flex;gap:12px;align-items:center">
+            <button id="theme-toggle" class="toggle" title="Toggle dark mode">🌙 Dim Mode</button>
+        </div>
+    </div>
 
-            <label for="model">Model</label>
-            <select id="model">
-                {% for name in model_names %}
-                    <option value="{{ name }}">{{ name }}</option>
-                {% endfor %}
-            </select>
+    <!-- input panel -->
+    <section class="panel">
+        <label for="smiles">SMILES</label>
+        <input id="smiles" type="text" placeholder="CC(=O)OC1=CC=CC=C1C(=O)O" aria-label="SMILES string">
 
-            <button id="predict-btn">Run Prediction</button>
+        <label for="model">Model</label>
+        <select id="model" aria-label="Model">
+            {% for name in model_names %}
+                <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
 
-            <div id="loading" class="status info">🔍 Running prediction...</div>
-            <div id="error" class="status error"></div>
-        </section>
+        <div class="controls">
+            <button id="predict-btn" class="btn">Run Prediction</button>
+            <div id="loading" class="status info" role="status" aria-live="polite" style="display:none">🔎 Running prediction...</div>
+            <div id="error" class="status error" role="alert" style="display:none"></div>
+        </div>
+    </section>
 
-        <!-- Results Panel -->
-        <section class="panel" id="results" style="display: none;">
-            <h2>Prediction Results</h2>
-            <p class="muted" id="model-used"></p>
-
-            <p><strong>Prediction:</strong> <span id="prediction-value">-</span></p>
-            <p><strong>Confidence:</strong> <span id="confidence-value">-</span></p>
-
-            <div class="grid">
-                <div>
-                    <h3>Probabilities</h3>
-                    <table>
-                        <tr>
-                            <th>Inactive (0)</th>
-                            <td id="prob-class-0">-</td>
-                        </tr>
-                        <tr>
-                            <th>Active (1)</th>
-                            <td id="prob-class-1">-</td>
-                        </tr>
-                    </table>
+    <!-- results grid -->
+    <div class="grid">
+        <!-- left: main results -->
+        <section class="panel enter" id="left-panel" style="display:none">
+            <div class="card-small">
+                <div class="stat-row">
+                    <div>
+                        <div class="stat-label">Model</div>
+                        <div id="model-used" class="stat-value">—</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="stat-label">Prediction</div>
+                        <div id="prediction-value" class="stat-value">—</div>
+                    </div>
                 </div>
 
-                <div>
-                    <h3>Molecular Features</h3>
-                    <table id="features-table">
-                        <tbody></tbody>
-                    </table>
+                <div style="margin-top:6px" class="muted">
+                    Confidence: <span id="confidence-value">—</span>
+                </div>
+            </div>
+
+            <div style="margin-top:16px">
+                <h3 style="margin-bottom:8px">Probabilities</h3>
+
+                <div class="prob-row">
+                    <div class="prob-name">Inactive (0)</div>
+                    <div style="flex:1">
+                        <div class="progress">
+                            <span id="prob-fill-0" class="fill primary" style="width:0%"></span>
+                            <div class="label" id="prob-label-0" style="right:10px"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prob-row">
+                    <div class="prob-name">Active (1)</div>
+                    <div style="flex:1">
+                        <div class="progress">
+                            <span id="prob-fill-1" class="fill success" style="width:0%"></span>
+                            <div class="label" id="prob-label-1" style="right:10px"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:16px">
+                    <h3 style="margin-bottom:8px">Confidence Gauge</h3>
+                    <div class="progress" style="height:22px">
+                        <span id="conf-fill" class="fill primary" style="width:0%"></span>
+                        <div class="label" id="conf-label"></div>
+                    </div>
                 </div>
             </div>
         </section>
 
-    </main>
+        <!-- right: features -->
+        <aside class="panel enter" id="right-panel" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <h3 style="margin:0">Molecular Features</h3>
+                <div class="pill" id="mw-pill">— Mw</div>
+            </div>
 
-    <script>
-        const predictBtn = document.getElementById('predict-btn');
-        const loadingBox = document.getElementById('loading');
-        const errorBox = document.getElementById('error');
-        const resultsSection = document.getElementById('results');
+            <div id="features-container" class="features-list">
+                <!-- feature items inserted here -->
+            </div>
 
-        predictBtn.addEventListener('click', async () => {
-            const smiles = document.getElementById('smiles').value.trim();
-            const modelName = document.getElementById('model').value;
+            <div style="margin-top:16px;color:var(--muted);font-size:0.9rem">
+                Values are approximate descriptors calculated by RDKit. Bars animate to show relative magnitude.
+            </div>
+        </aside>
+    </div>
 
-            resultsSection.style.display = 'none';
-            errorBox.style.display = 'none';
+</main>
 
-            if (!smiles) {
-                showError('Please enter a SMILES string.');
-                return;
-            }
+<script>
+/* ========== DARK MODE PERSISTENCE ========== */
+(function(){
+    const root = document.documentElement;
+    const toggle = document.getElementById('theme-toggle');
+    const themeKey = 'sertraline_dim_theme';
 
-            loadingBox.style.display = 'block';
-            predictBtn.disabled = true;
+    function applyTheme(theme){
+        if(theme === 'dark'){ root.setAttribute('data-theme','dark'); toggle.textContent = '☀️ Light'; }
+        else { root.removeAttribute('data-theme'); toggle.textContent = '🌙 Dim Mode'; }
+    }
+    // initial
+    const stored = localStorage.getItem(themeKey) || 'light';
+    applyTheme(stored);
 
-            try {
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ smiles, model_name: modelName })
-                });
+    toggle.addEventListener('click', ()=>{
+        const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem(themeKey, next);
+    });
+})();
 
-                const data = await response.json();
-                loadingBox.style.display = 'none';
-                predictBtn.disabled = false;
+/* ========== HELPERS ========== */
+function setFill(el, pct){
+    pct = Math.max(0, Math.min(100, Number(pct)));
+    // animate width (CSS transition handles it)
+    el.style.width = pct + '%';
+}
+function formatPct(x){
+    return (Number(x)*100).toFixed(2) + '%';
+}
+function humanLabel(key){
+    return key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
 
-                if (!response.ok) {
-                    showError(data.error || 'Prediction failed.');
-                    return;
-                }
+/* ========== PREDICTION FLOW ========== */
+const predictBtn = document.getElementById('predict-btn');
+const loadingBox = document.getElementById('loading');
+const errorBox = document.getElementById('error');
+const leftPanel = document.getElementById('left-panel');
+const rightPanel = document.getElementById('right-panel');
 
-                displayResults(data);
+predictBtn.addEventListener('click', async ()=>{
+    const smiles = document.getElementById('smiles').value.trim();
+    const modelName = document.getElementById('model').value;
+    leftPanel.style.display = 'none';
+    rightPanel.style.display = 'none';
+    errorBox.style.display = 'none';
 
-            } catch (err) {
-                loadingBox.style.display = 'none';
-                predictBtn.disabled = false;
-                showError(err.message);
-            }
+    if(!smiles){
+        showError('Please enter a SMILES string.');
+        return;
+    }
+
+    loadingBox.style.display = 'inline-block';
+    predictBtn.disabled = true;
+
+    try {
+        const res = await fetch('/predict',{
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({smiles, model_name: modelName})
         });
 
-        function showError(message) {
-            errorBox.textContent = message;
-            errorBox.style.display = 'block';
+        const data = await res.json();
+        loadingBox.style.display = 'none';
+        predictBtn.disabled = false;
+
+        if(!res.ok){
+            showError(data.error || 'Prediction failed');
+            return;
+        }
+        renderResults(data);
+    } catch(err){
+        loadingBox.style.display = 'none';
+        predictBtn.disabled = false;
+        showError(err.message || 'Network error');
+    }
+});
+
+function showError(msg){
+    errorBox.style.display = 'block';
+    errorBox.textContent = msg;
+}
+
+/* ========== RENDERING ========== */
+function renderResults(data){
+    // show basic text
+    document.getElementById('model-used').textContent = data.model_name || '—';
+    document.getElementById('prediction-value').textContent = data.prediction;
+    document.getElementById('confidence-value').textContent = (data.confidence*100).toFixed(2) + '%';
+
+    // probabilities
+    const p0 = data.probabilities?.class_0 ?? 0;
+    const p1 = data.probabilities?.class_1 ?? 0;
+
+    // fill bars (animated)
+    const fill0 = document.getElementById('prob-fill-0');
+    const fill1 = document.getElementById('prob-fill-1');
+    const label0 = document.getElementById('prob-label-0');
+    const label1 = document.getElementById('prob-label-1');
+
+    // set widths after tiny delay to allow CSS transition
+    requestAnimationFrame(()=>{
+        setFill(fill0, p0*100);
+        setFill(fill1, p1*100);
+        label0.textContent = (p0*100).toFixed(2) + '%';
+        label1.textContent = (p1*100).toFixed(2) + '%';
+    });
+
+    // confidence bar
+    const confFill = document.getElementById('conf-fill');
+    const confLabel = document.getElementById('conf-label');
+    requestAnimationFrame(()=> {
+        setFill(confFill, Math.max(p0,p1)*100);
+        confLabel.textContent = 'Confidence: ' + (Math.max(p0,p1)*100).toFixed(2) + '%';
+    });
+
+    // molecular features
+    renderFeatures(data.features || {});
+
+    // show panels
+    leftPanel.style.display = 'block';
+    rightPanel.style.display = 'block';
+}
+
+/* ========== FEATURES VISUALIZATION ========== */
+function renderFeatures(features){
+    const container = document.getElementById('features-container');
+    const mwPill = document.getElementById('mw-pill');
+    container.innerHTML = '';
+
+    // list of features and an estimated 'scale' for each to make bars meaningful
+    // You can adjust these heuristic caps based on your dataset.
+    const caps = {
+        molecular_weight: 500,
+        logp: 8,
+        h_bond_donors: 10,
+        h_bond_acceptors: 15,
+        tpsa: 200,
+        rotatable_bonds: 30,
+        aromatic_rings: 6,
+        total_rings: 10
+    };
+
+    // convert features keys to uniform names if needed (the API returns molecular_weight, logp, etc)
+    // show mw pill
+    const mw = features.molecular_weight ?? null;
+    mwPill.textContent = mw ? Math.round(mw) + ' Mw' : '— Mw';
+
+    // produce items sorted by significance (tpsa, logp etc)
+    const keysPrefer = ['molecular_weight','logp','h_bond_donors','h_bond_acceptors','tpsa','rotatable_bonds','aromatic_rings','total_rings'];
+    const keysPresent = Object.keys(features).filter(k=>keysPrefer.includes(k)).sort((a,b)=> keysPrefer.indexOf(a)-keysPrefer.indexOf(b));
+
+    // fallback to any present keys if above not present
+    const allKeys = keysPresent.length ? keysPresent : Object.keys(features);
+
+    if(allKeys.length === 0){
+        const note = document.createElement('div');
+        note.className = 'muted';
+        note.textContent = 'No features returned by the API.';
+        container.appendChild(note);
+        return;
+    }
+
+    allKeys.forEach(key=>{
+        const value = features[key];
+        const displayName = humanLabel(key);
+        const cap = caps[key] ?? Math.max( (Math.abs(Number(value))||1)*3, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--max-feature-value')) || 100 );
+
+        // defensively compute percentage (0-100)
+        // if value is boolean or integer, scale accordingly
+        let pct = 0;
+        if(typeof value === 'number'){
+            pct = Math.min(100, Math.abs(value) / cap * 100);
+        } else {
+            const num = Number(value);
+            pct = isNaN(num) ? 0 : Math.min(100, Math.abs(num) / cap * 100);
         }
 
-        function displayResults(data) {
-            document.getElementById('model-used').textContent = `Model Used: ${data.model_name}`;
-            document.getElementById('prediction-value').textContent = data.prediction;
-            document.getElementById('confidence-value').textContent = (data.confidence * 100).toFixed(2) + '%';
-            document.getElementById('prob-class-0').textContent = (data.probabilities.class_0 * 100).toFixed(2) + '%';
-            document.getElementById('prob-class-1').textContent = (data.probabilities.class_1 * 100).toFixed(2) + '%';
+        // pick color based on semantics
+        let colorClass = 'primary';
+        if(key.includes('logp') || key.includes('rotatable') ) colorClass = 'warn';
+        if(key.includes('h_bond') || key.includes('hetero')) colorClass = 'danger';
+        if(key.includes('molecular_weight') || key.includes('ring')) colorClass = 'success';
 
-            const tableBody = document.querySelector('#features-table tbody');
-            tableBody.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'feature-item';
 
-            Object.entries(data.features).forEach(([label, value]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <th>${formatLabel(label)}</th>
-                    <td>${value}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+        item.innerHTML = `
+            <div class="feature-meta">
+                <div style="font-weight:700">${displayName}</div>
+                <div class="muted">${value}</div>
+            </div>
+            <div class="progress" aria-hidden="true">
+                <span class="fill ${colorClass}" style="width:0%"></span>
+            </div>
+        `;
+        container.appendChild(item);
 
-            resultsSection.style.display = 'block';
-        }
+        // animate fill
+        const fillEl = item.querySelector('.fill');
+        // small delay stagger
+        setTimeout(()=> setFill(fillEl, pct), 120);
+    });
+}
 
-        function formatLabel(str) {
-            return str.replace(/_/g, ' ')
-                      .replace(/\b\w/g, c => c.toUpperCase());
-        }
-    </script>
-
+</script>
 </body>
 </html>
